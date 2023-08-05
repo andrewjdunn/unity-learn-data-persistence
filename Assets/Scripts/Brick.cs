@@ -1,23 +1,31 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
 public class Brick : MonoBehaviour
 {
     public UnityEvent<int> onDestroyed;
-    
+
     public int PointValue;
+    private int hitsLeft;
 
     void Start()
+    {
+        hitsLeft = Settings.Instance.ActiveSettings.multiHitBricks ? PointValue : 1;
+        SetColor(PointValue);
+    }
+
+    private void SetColor(int colorIndex)
     {
         var renderer = GetComponentInChildren<Renderer>();
 
         MaterialPropertyBlock block = new MaterialPropertyBlock();
-        switch (PointValue)
+        switch (colorIndex)
         {
-            case 1 :
+            case 0:
+                block.SetColor("_BaseColor", Color.white);
+                break;
+            case 1:
                 block.SetColor("_BaseColor", Color.green);
                 break;
             case 2:
@@ -35,9 +43,25 @@ public class Brick : MonoBehaviour
 
     private void OnCollisionEnter(Collision other)
     {
-        onDestroyed.Invoke(PointValue);
-        
-        //slight delay to be sure the ball have time to bounce
-        Destroy(gameObject, 0.2f);
+        --hitsLeft; if (hitsLeft == 0)
+        {
+            onDestroyed.Invoke(PointValue);
+            StopCoroutine(nameof(ResetColor));
+
+            //slight delay to be sure the ball have time to bounce
+            gameObject.GetComponent<Renderer>().enabled = false;
+            Destroy(gameObject, 0.2f);
+        }
+        else
+        {
+            SetColor(0);
+            StartCoroutine(ResetColor());
+        }
+    }
+
+    private IEnumerator ResetColor()
+    {
+        yield return new WaitForSeconds(.2f);
+        SetColor(PointValue);
     }
 }

@@ -1,7 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MainManager : MonoBehaviour
@@ -11,17 +8,17 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
-    public GameObject GameOverText;
+    public Text HighSoreText;
+
+    private CurrentPlayer player;
     
     private bool m_Started = false;
-    private int m_Points;
+    private int m_Points;    
     
-    private bool m_GameOver = false;
-
-    
-    // Start is called before the first frame update
     void Start()
     {
+        player = GameObject.Find("DataObject").GetComponent<CurrentPlayer>();
+
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
         
@@ -36,6 +33,9 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+
+        AddPoint(0);
+        UpdateHighScore();
     }
 
     private void Update()
@@ -53,11 +53,14 @@ public class MainManager : MonoBehaviour
                 Ball.AddForce(forceDir * 2.0f, ForceMode.VelocityChange);
             }
         }
-        else if (m_GameOver)
+
+        if (Settings.Instance.ActiveSettings.endAfterLastBrick)
         {
-            if (Input.GetKeyDown(KeyCode.Space))
+            var bricks = GameObject.FindGameObjectsWithTag("Brick");
+            if (bricks.Length == 0)
             {
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+                AddPoint(50);
+                GameOver();
             }
         }
     }
@@ -65,12 +68,17 @@ public class MainManager : MonoBehaviour
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        ScoreText.text = $"Score : {player.CurrentPlayerName} : {m_Points}";
     }
 
     public void GameOver()
     {
-        m_GameOver = true;
-        GameOverText.SetActive(true);
+        HighScore.Instance.AddHighScore(player.CurrentPlayerName, m_Points);
+        Utility.LoadBuildSettingsSceneByPath("Assets/Scenes/GameOver.unity");
+    }
+
+    private void UpdateHighScore()
+    {
+        HighSoreText.text = $"Best Score : {HighScore.Instance.HighestScorer} : {HighScore.Instance.HighestScore}";
     }
 }
